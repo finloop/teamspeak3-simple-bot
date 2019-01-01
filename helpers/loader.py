@@ -1,4 +1,4 @@
-with open("apikey_ts.txt") as f:
+with open("apikey.txt") as f:
     lines = [line.rstrip('\n') for line in f]
     apikey = lines[0]
 

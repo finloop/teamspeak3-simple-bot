@@ -12,7 +12,8 @@ from time import sleep
 
 import ts3
 
-from helpers.teamspeak import sendcurrchannelmsg, apikey
+from helpers.loader import apikey, ADMINS, USERS
+from helpers.teamspeak import sendcurrchannelmsg
 from helpers.youtube import VIDEO_QUEUE, COMMAND_QUEUE, youtube_add_video, player, play, youtube_add_playlist
 
 logging.basicConfig(level=logging.DEBUG,
