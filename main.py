@@ -18,13 +18,7 @@ from helpers.youtube import VIDEO_QUEUE, COMMAND_QUEUE, youtube_add_video, playe
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s', filename="./logs.txt")
 
-with open("admins.txt") as f:
-    lines = [line.rstrip('\n') for line in f]
-    ADMINS = lines
 
-with open("users.txt") as f:
-    lines = [line.rstrip('\n') for line in f]
-    USERS = lines
 
 CONTROLS_QUEUE = Queue.Queue()
 YOUTUBE_QUEUE = Queue.Queue()
