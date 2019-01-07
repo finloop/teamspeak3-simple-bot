@@ -2,6 +2,7 @@
 
 import ts3
 
+from helpers.loader import apikey
 
 
 def sendcurrchannelmsg(msg):

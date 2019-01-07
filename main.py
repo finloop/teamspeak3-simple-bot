@@ -11,15 +11,16 @@ from subprocess import Popen
 from time import sleep
 
 import ts3
+import validators
 
 from helpers.loader import apikey, ADMINS, USERS
 from helpers.teamspeak import sendcurrchannelmsg
-from helpers.youtube import VIDEO_QUEUE, COMMAND_QUEUE, youtube_add_video, player, play, youtube_add_playlist
+from helpers.youtube import VIDEO_QUEUE, COMMAND_QUEUE, youtube_add_video, player, play, youtube_add_playlist, \
+    youtube_add_playlist_from_link, \
+    youtube_add_video_from_link
 
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s', filename="./logs.txt")
-
-
 
 CONTROLS_QUEUE = Queue.Queue()
 YOUTUBE_QUEUE = Queue.Queue()
@@ -50,7 +51,7 @@ class ProducerThread(threading.Thread):
             if client['client_nickname'] == 'BotPrzemka' and client['clid'] is not 0:
                 botCLID = client['clid']
                 query = ts3conn.query("clientmove", cid=10109, clid=botCLID)
-                ts3conn.exec_query(query)
+                # ts3conn.exec_query(query)
                 logging.debug("Executing query: {0}".format(query))
                 sleep(0.5)
                 sendcurrchannelmsg(
@@ -89,19 +90,35 @@ class FirstConsumerThread(threading.Thread):
                     command = COMMAND_QUEUE.get()
                     logging.debug("Processing {0} as a user command".format(command))
                     if (command['invokeruid'] in ADMINS) or (command['invokeruid'] in USERS):
-                        command['msg'] = command['msg'].replace('\\\\s', ' ')
+                        # command['msg'] = command['msg'].replace('\\\\s', ' ')
                         if command['msg'].startswith("!song"):
-                            s = command['msg'][command['msg'].index(' '):]
-                            if len(s) >= 3:
-                                logging.debug("Adding {0} as a add video command".format(command))
-                                YOUTUBE_QUEUE.put({"type": "video", "query": s})
+                            s = command['msg'][command['msg'].index(' ') + 1:]
+                            try:
+                                s = s.replace('[URL]', '')
+                                s = s[:s.index('[')]
+                            except Exception:
+                                print("not link...")
+                            if len(s) >= 1:
+                                if validators.url(s):
+                                    YOUTUBE_QUEUE.put({"type": "songlink", "link": s})
+                                else:
+                                    logging.debug("Adding {0} as a add video command".format(command))
+                                    YOUTUBE_QUEUE.put({"type": "video", "query": s})
                                 # youtube_add_video(s)
                         if command['msg'].startswith("!playlist"):
-                            s = command['msg'][command['msg'].index(' '):]
-                            if len(s) >= 3:
-                                logging.debug("Adding {0} as a add playlist command".format(command))
-                                YOUTUBE_QUEUE.put({"type": "playlist", "query": s})
-                                # youtube_add_playlist(s)
+                            s = command['msg'][command['msg'].index(' ') + 1:]
+                            try:
+                                s = s.replace('[URL]', '')
+                                s = s[:s.index('[')]
+                            except Exception:
+                                print("not link...")
+                            if len(s) >= 1:
+                                if validators.url(s):
+                                    YOUTUBE_QUEUE.put({"type": "playlistlink", "link": s})
+                                else:
+                                    logging.debug("Adding {0} as a add playlist command".format(command))
+                                    YOUTUBE_QUEUE.put({"type": "playlist", "query": s})
+                            # youtube_add_playlist(s)
                         elif command['msg'].startswith("!skipall"):
                             CONTROLS_QUEUE.put("SKIPALL")
                         elif command['msg'].startswith("!skip"):
@@ -162,13 +179,13 @@ class FirstConsumerThread(threading.Thread):
                                         for user in USERS:
                                             f.write("{0}\n".format(user))
                         elif command['msg'].startswith("!help"):
-                            sb = "!song [tytuł piosenki z yt]\n" \
-                                 "!playlist [tytuł playlisty z yt, doda się max 20]\n" \
+                            sb = "!song [tytuł piosenki z yt lub link]\n" \
+                                 "!playlist [tytuł playlisty z yt, doda się max 20 lub link]\n" \
                                  "!skip - przeskakuje jedną piosenkę dalej\n" \
                                  "!skipall - przeskakuje całą playlistę\n" \
                                  "!adduser [UID bez znaku =]\n" \
-                                 "!deluser [UID bez znaku =]" \
-                                 "!move [ID kanału]"
+                                 "!deluser [UID bez znaku =]\n" \
+                                 "!move [ID kanału lub jego nazwa]"
                             sendcurrchannelmsg(sb)
 
                 sleep(0.03)
@@ -277,6 +294,10 @@ class YoutubeWorker(threading.Thread):
                     elif obj['type'] is 'playlist':
                         # add playlist to playlist
                         youtube_add_playlist(obj['query'])
+                    elif obj['type'] is 'playlistlink':
+                        youtube_add_playlist_from_link(obj['link'])
+                    elif obj['type'] is 'songlink':
+                        youtube_add_video_from_link(obj['link'])
                 sleep(0.5)
             except Exception as e:
                 logging.debug("Exception: {0}".format(e))

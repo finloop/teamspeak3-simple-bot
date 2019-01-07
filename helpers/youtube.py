@@ -8,6 +8,7 @@ import vlc
 from googleapiclient.discovery import build
 
 from helpers.loader import DEVELOPER_KEY
+from helpers.teamspeak import sendcurrchannelmsg
 
 DEVELOPER_KEY = 'AIzaSyAjDg9c8VOQiUdTlmmT3zKkGPvjR9i1e4c'
 YOUTUBE_API_SERVICE_NAME = 'youtube'
@@ -68,6 +69,16 @@ def youtube_add_video(query):
             break
 
 
+def youtube_add_video_from_link(link):
+    try:
+        video = pafy.new(link)
+        if video.length < 600:
+            VIDEO_QUEUE.put(video)
+            msg = "Dodałem {} do playlisty.".format(video.title)
+            print(msg)
+    except Exception as e:
+        sendcurrchannelmsg("Nie udało się dodać filmu z linku.")
+
 def youtube_add_playlist(query):
     try:
         parser = argparse.ArgumentParser()
@@ -93,9 +104,8 @@ def youtube_add_playlist(query):
             i = 0
             for item in pafy_playlist(playlists[0])['items']:
                 try:
-                    video = pafy.new(item['pafy'].watchv_url)
-                    VIDEO_QUEUE.put(video)
-                    print("Added {} to playlist.".format(video.title))
+                    VIDEO_QUEUE.put(item['pafy'])
+                    print("Added {} to playlist.".format(item['pafy'].title))
                     i += 1
                     if i > 50:
                         break
@@ -103,6 +113,28 @@ def youtube_add_playlist(query):
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     print(exc_type, fname, exc_tb.tb_lineno)
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(exc_type, fname, exc_tb.tb_lineno)
+        raise Exception
+
+
+def youtube_add_playlist_from_link(link):
+    try:
+        playlists = pafy.get_playlist(link)
+        i = 0
+        for item in playlists['items']:
+            try:
+                VIDEO_QUEUE.put(item['pafy'])
+                print("Added {} to playlist.".format(item['pafy'].title))
+                i += 1
+                if i > 50:
+                    break
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
